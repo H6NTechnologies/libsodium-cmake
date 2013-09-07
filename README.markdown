@@ -66,13 +66,13 @@ You can eventually pass to CMake some options. Particularly:
 - ENABLE_BLOCKING_RANDOM=1
 - ENABLE_SSP=1
 - ENABLE_PIE=1
-- HAVE_AMD64_ASM_V=1
 - ENABLE_ASM=1
 - HAVE_TI_MODE_V=1
 
 You should prepend each option with -D such as:
 
-    cmake -DCMAKE_BUILD_TYPE=debug -DENABLE_SSP=1
+    cmake -DCMAKE_BUILD_TYPE=debug -DENABLE_SSP=1 -DHAVE_TI_MODE=1 -DENABLE_ASM=0
+
 
 
 ## Comparison with vanilla NaCl
