@@ -136,7 +136,7 @@ IF(ENABLE_DEBUG)
         Wvariable-decl
     )
 ELSE(ENABLE_DEBUG)
-    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fomit-frame-pointer -mtune=nocona")
+    SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fomit-frame-pointer")
 ENDIF(ENABLE_DEBUG)
 
 IF(ENABLE_SSP)
