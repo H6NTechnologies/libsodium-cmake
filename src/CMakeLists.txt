@@ -1,4 +1,3 @@
-##
  # Copyright (c) 2013
  # Massimo Cetra <mcetra at gmail dot com>
  #
@@ -80,10 +79,8 @@ IF(CMAKE_TEST_ENDIANESS_STRINGS_BE)
 ENDIF(CMAKE_TEST_ENDIANESS_STRINGS_BE)
 
 # ******************************************************************************
-# *********************** COMPILER FLAGS CHECKS ********************************
+# ************************ COMPILE CHECKS CHECKS *******************************
 # ******************************************************************************
-
-ADD_DEFINITIONS("-D_FORTIFY_SOURCE=2")
 
 PROJECT_CHECK_COMPILER_FLAGS(
     std=c99
@@ -93,7 +90,73 @@ PROJECT_CHECK_COMPILER_FLAGS(
     fwrapv
     fno-strict-aliasing
     fno-strict-overflow
+)
 
+SET(__TMP ${CMAKE_REQUIRED_LIBRARIES})
+SET(CMAKE_REQUIRED_LIBRARIES "m")
+CHECK_C_SOURCE_COMPILES(
+    "
+    #include <fenv.h>
+    #pragma STDC FENV_ACCESS ON
+
+    int main(void) {
+    const int previous_rounding_mode = fegetround();
+    fesetround(FE_TONEAREST);
+    fesetround(previous_rounding_mode);
+    };
+    " AVAIL_FENV_H)
+SET(CMAKE_REQUIRED_LIBRARIES ${__TMP})
+
+
+CHECK_C_SOURCE_COMPILES(
+    "
+    int main(void) {
+    #if defined(__amd64) || defined(__amd64__) || defined(__x86_64__)
+    /* neat */
+    #else
+    # error !amd64
+    #endif
+    __asm__(\"pxor %xmm12,%xmm6\");
+    };
+    " AVAIL_AMD64_ASM)
+
+
+CHECK_C_SOURCE_COMPILES(
+    "
+    int main(void) {
+    #ifndef __GNUC__
+    # error mode(TI) is a gcc extension
+    #endif
+    #if defined(__clang__) && !defined(__x86_64__)
+    # error clang does not properly compile smult_curve25519_donna_c64.c
+    #endif
+    typedef unsigned uint128_t __attribute__((mode(TI)));
+    uint128_t x;
+    (void) x;
+    };
+    " AVAIL_TI_MODE)
+
+
+IF(AVAIL_FENV_H)
+    MESSAGE(STATUS "* Floating-point rounding mode is accessible")
+ENDIF(AVAIL_FENV_H)
+
+IF(AVAIL_AMD64_ASM)
+    MESSAGE(STATUS "* Basic amd64 code can be assembled")
+ENDIF(AVAIL_AMD64_ASM)
+
+IF(AVAIL_TI_MODE)
+    MESSAGE(STATUS "* GCC TI mode is available")
+ENDIF(AVAIL_TI_MODE)
+
+
+# ******************************************************************************
+# *********************** COMPILER FLAGS CHECKS ********************************
+# ******************************************************************************
+
+ADD_DEFINITIONS("-D_FORTIFY_SOURCE=2")
+
+PROJECT_CHECK_COMPILER_FLAGS(
     Wall
     Wdiv-by-zero
     Wextra
@@ -104,8 +167,6 @@ PROJECT_CHECK_COMPILER_FLAGS(
     Wwrite-strings
 
 )
-
-#SET(_LINKER_OPTIONS "-Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack")
 
 # ******************************************************************************
 # ********************* COMMAND LINE FLAGS CHECKS ******************************
@@ -139,51 +200,64 @@ ELSE(ENABLE_DEBUG)
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3 -fomit-frame-pointer")
 ENDIF(ENABLE_DEBUG)
 
-IF(ENABLE_SSP)
-    CHECK_C_COMPILER_FLAG("-fstack-protector" WITH_SSP)
-    CHECK_C_COMPILER_FLAG("-fstack-protector-all" WITH_SSP_ALL)
-    IF(WITH_SSP_ALL)
-        #MESSAGE(STATUS "Enabling stack protector-all")
-        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all")
-    ELSE(WITH_SSP_ALL)
-        IF(WITH_SSP)
-            #MESSAGE(STATUS "Enabling stack protector")
-            SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
-        ENDIF(WITH_SSP)
-    ENDIF(WITH_SSP_ALL)
-ENDIF(ENABLE_SSP)
+MESSAGE(STATUS "---------------------------------------------------" )
+
+#IF(NOT DISABLE_SSP)
+#    CHECK_C_COMPILER_FLAG("-fstack-protector" WITH_SSP)
+#    CHECK_C_COMPILER_FLAG("-fstack-protector-all" WITH_SSP_ALL)
+#    IF(WITH_SSP_ALL)
+#        MESSAGE(STATUS "Enabling stack protector-all")
+#        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all")
+#    ELSE(WITH_SSP_ALL)
+#        IF(WITH_SSP)
+#            MESSAGE(STATUS "Enabling stack protector")
+#            SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+#        ENDIF(WITH_SSP)
+#    ENDIF(WITH_SSP_ALL)
+#ELSE(NOT DISABLE_SSP)
+#    MESSAGE(STATUS "Disabling SSP")
+#ENDIF(NOT DISABLE_SSP)
 
 
-IF(ENABLE_PIE)
-    CHECK_C_COMPILER_FLAG("-fPIE" WITH_FPIE)
-    IF(WITH_FPIE)
-        MESSAGE(STATUS "Enabling -fPIE")
-        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
-        SET(_LINKER_OPTIONS "-fpie")
-    ENDIF(WITH_FPIE)
-ENDIF(ENABLE_PIE)
+#IF(NOT DISABLE_PIE)
+#    CHECK_C_COMPILER_FLAG("-fPIE" WITH_FPIE)
+#    IF(WITH_FPIE)
+#        MESSAGE(STATUS "Enabling -fPIE")
+#        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
+#        #SET(_LINKER_OPTIONS "-fpie")
+#    ENDIF(WITH_FPIE)
+#ELSE(NOT DISABLE_PIE)
+#    MESSAGE(STATUS "Disabling PIE")
+#ENDIF(NOT DISABLE_PIE)
 
 
-IF(NOT ENABLE_ASM)
-    SET(HAVE_AMD64_ASM_V 0)
-ELSE(NOT ENABLE_ASM)
-    SET(HAVE_AMD64_ASM_V ${ENABLE_ASM})
-    ADD_DEFINITIONS("-DHAVE_AMD64_ASM=1")
-    # TODO Check HW Support
-ENDIF(NOT ENABLE_ASM)
+#IF(NOT DISABLE_ASM)
+#    IF(HAVE_AMD64_ASM)
+#        SET(HAVE_AMD64_ASM_V 1)
+#        ADD_DEFINITIONS("-DHAVE_AMD64_ASM=1 -DHAVE_AMD64_ASM_V=1")
+#    ENDIF(HAVE_AMD64_ASM)
+#    MESSAGE(STATUS "Enabling ASM")
+#ELSE(NOT DISABLE_ASM)
+#    SET(HAVE_AMD64_ASM_V 0)
+#    SET(HAVE_AMD64_ASM)
+#    MESSAGE(STATUS "Disabling ASM")
+#ENDIF(NOT DISABLE_ASM)
 
 
-IF(NOT HAVE_TI_MODE)
-    SET(HAVE_TI_MODE_V   0)
-ELSE(NOT HAVE_TI_MODE)
-    SET(HAVE_TI_MODE_V  ${HAVE_TI_MODE})
-    ADD_DEFINITIONS("-DHAVE_TI_MODE=1")
-ENDIF(NOT HAVE_TI_MODE)
+#IF(ENABLE_BLOCKING_RANDOM)
+#    ADD_DEFINITIONS("-DUSE_BLOCKING_RANDOM=1")
+#    MESSAGE(STATUS "Enabling random blocking")
+#ENDIF(ENABLE_BLOCKING_RANDOM)
 
 
-IF(ENABLE_BLOCKING_RANDOM)
-    ADD_DEFINITIONS("-DUSE_BLOCKING_RANDOM=1")
-ENDIF(ENABLE_BLOCKING_RANDOM)
+#IF(NOT HAVE_TI_MODE)
+#    SET(HAVE_TI_MODE_V 0)
+#ELSE(NOT HAVE_TI_MODE)
+#    SET(HAVE_TI_MODE_V 1)
+#    ADD_DEFINITIONS("-DHAVE_TI_MODE=1")
+#ENDIF(NOT HAVE_TI_MODE)
+
+
 
 
 # ******************************************************************************
