@@ -197,7 +197,7 @@ SET(_SOURCES
 	sodium/version.c
 )
 
-IF (NOT HAVE_TI_MODE)
+IF (NOT HAVE_TI_MODE_V )
     MESSAGE(STATUS "TI_MODE disabled")
     SET(_SOURCES
 	${_SOURCES}
@@ -205,7 +205,7 @@ IF (NOT HAVE_TI_MODE)
 	crypto_scalarmult/curve25519/ref/base_curve25519_ref.c
 	crypto_scalarmult/curve25519/ref/smult_curve25519_ref.c
     )
-ELSE (NOT HAVE_TI_MODE)
+ELSE (NOT HAVE_TI_MODE_V)
     MESSAGE(STATUS "TI_MODE enabled")
     SET(_SOURCES
 	${_SOURCES}
@@ -213,10 +213,10 @@ ELSE (NOT HAVE_TI_MODE)
 	crypto_scalarmult/curve25519/donna_c64/base_curve25519_donna_c64.c
 	crypto_scalarmult/curve25519/donna_c64/smult_curve25519_donna_c64.c
     )
-ENDIF (NOT HAVE_TI_MODE)
+ENDIF (NOT HAVE_TI_MODE_V)
 
 
-IF (NOT HAVE_AMD64_ASM)
+IF (NOT HAVE_AMD64_ASM_V)
     MESSAGE(STATUS "AMD64 ASM disabled")
     SET(_SOURCES
 	${_SOURCES}
@@ -224,14 +224,14 @@ IF (NOT HAVE_AMD64_ASM)
 	crypto_stream/salsa20/ref/stream_salsa20_ref.c
 	crypto_stream/salsa20/ref/xor_salsa20_ref.c
     )
-ELSE (NOT HAVE_AMD64_ASM)
+ELSE (NOT HAVE_AMD64_ASM_V)
     MESSAGE(STATUS "AMD64 ASM enabled")
     SET(_SOURCES
 	${_SOURCES}
 	crypto_stream/salsa20/amd64_xmm6/api.h
 	crypto_stream/salsa20/amd64_xmm6/stream_salsa20_amd64_xmm6.S
     )
-ENDIF (NOT HAVE_AMD64_ASM)
+ENDIF (NOT HAVE_AMD64_ASM_V)
 
 
 # *****************************************************************
@@ -244,30 +244,30 @@ include_directories(
 
 # *****************************************************************
 
-#add_library (
-#    libsodium
-#	SHARED
-#	    ${_SOURCES}
-#)
+add_library (
+    libsodium
+	SHARED
+	    ${_SOURCES}
+)
 
-#SET_TARGET_PROPERTIES(
-#    libsodium
-#    PROPERTIES
-#	PREFIX ""
-#	PROJECT_LABEL "libsodium"
-#	INSTALL_RPATH "${LIBSODIUM_LIB_DIR}"
-#        LINK_FLAGS "${_LINKER_OPTIONS}"
-#        VERSION   "${SODIUM_LIBRARY_VERSION_MAJOR}.${SODIUM_LIBRARY_VERSION_MINOR}"
-#        SOVERSION "${SODIUM_LIBRARY_VERSION_MAJOR}"
-#)
+SET_TARGET_PROPERTIES(
+    libsodium
+    PROPERTIES
+	PREFIX ""
+	PROJECT_LABEL "libsodium"
+	INSTALL_RPATH "${LIBSODIUM_LIB_DIR}"
+        LINK_FLAGS "${_LINKER_OPTIONS}"
+        VERSION   "${SODIUM_LIBRARY_VERSION_MAJOR}.${SODIUM_LIBRARY_VERSION_MINOR}"
+        SOVERSION "${SODIUM_LIBRARY_VERSION_MAJOR}"
+)
 
-#INSTALL(
-#    TARGETS
-#	libsodium
-#    PERMISSIONS OWNER_WRITE OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
-#    LIBRARY DESTINATION ${LIBSODIUM_LIB_DIR}
-#    ARCHIVE DESTINATION ${LIBSODIUM_LIB_DIR}
-#)
+INSTALL(
+    TARGETS
+	libsodium
+    PERMISSIONS OWNER_WRITE OWNER_READ OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE
+    LIBRARY DESTINATION ${LIBSODIUM_LIB_DIR}
+    ARCHIVE DESTINATION ${LIBSODIUM_LIB_DIR}
+)
 
 # *****************************************************************
 
@@ -281,6 +281,7 @@ SET_TARGET_PROPERTIES(
     libsodium-static
     PROPERTIES
 	OUTPUT_NAME libsodium
+        LINK_FLAGS "${_LINKER_OPTIONS}"
 )
 
 INSTALL(

@@ -84,13 +84,13 @@ ENDIF(CMAKE_TEST_ENDIANESS_STRINGS_BE)
 
 PROJECT_CHECK_COMPILER_FLAGS(
     std=c99
-
-    fvisibility=hidden
     fPIC
+    fvisibility=hidden
     fwrapv
     fno-strict-aliasing
     fno-strict-overflow
 )
+
 
 SET(__TMP ${CMAKE_REQUIRED_LIBRARIES})
 SET(CMAKE_REQUIRED_LIBRARIES "m")
@@ -108,6 +108,19 @@ CHECK_C_SOURCE_COMPILES(
 SET(CMAKE_REQUIRED_LIBRARIES ${__TMP})
 
 
+# test wether it is a x86 machine and as/gas is available
+SET(CAN_USE_ASSEMBLER FALSE)
+SET(CMAKE_ASM_SOURCE_FILE_EXTENSIONS "s;S")
+ENABLE_LANGUAGE(ASM)
+IF(CMAKE_ASM_COMPILER_WORKS)
+    SET(CAN_USE_ASSEMBLER TRUE)
+    MESSAGE(STATUS "ASM compiler found")
+ELSE(CMAKE_ASM_COMPILER_WORKS)
+    MESSAGE(STATUS "ASM compiler not found")
+ENDIF(CMAKE_ASM_COMPILER_WORKS)
+
+
+IF(CAN_USE_ASSEMBLER)
 CHECK_C_SOURCE_COMPILES(
     "
     int main(void) {
@@ -119,6 +132,7 @@ CHECK_C_SOURCE_COMPILES(
     __asm__(\"pxor %xmm12,%xmm6\");
     };
     " AVAIL_AMD64_ASM)
+ENDIF(CAN_USE_ASSEMBLER)
 
 
 CHECK_C_SOURCE_COMPILES(
@@ -202,21 +216,21 @@ ENDIF(ENABLE_DEBUG)
 
 MESSAGE(STATUS "---------------------------------------------------" )
 
-#IF(NOT DISABLE_SSP)
-#    CHECK_C_COMPILER_FLAG("-fstack-protector" WITH_SSP)
-#    CHECK_C_COMPILER_FLAG("-fstack-protector-all" WITH_SSP_ALL)
-#    IF(WITH_SSP_ALL)
-#        MESSAGE(STATUS "Enabling stack protector-all")
-#        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all")
-#    ELSE(WITH_SSP_ALL)
-#        IF(WITH_SSP)
-#            MESSAGE(STATUS "Enabling stack protector")
-#            SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
-#        ENDIF(WITH_SSP)
-#    ENDIF(WITH_SSP_ALL)
-#ELSE(NOT DISABLE_SSP)
-#    MESSAGE(STATUS "Disabling SSP")
-#ENDIF(NOT DISABLE_SSP)
+IF(NOT DISABLE_SSP)
+    CHECK_C_COMPILER_FLAG("-fstack-protector" WITH_SSP)
+    CHECK_C_COMPILER_FLAG("-fstack-protector-all" WITH_SSP_ALL)
+    IF(WITH_SSP_ALL)
+        MESSAGE(STATUS "Enabling stack protector-all")
+        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector-all")
+    ELSE(WITH_SSP_ALL)
+        IF(WITH_SSP)
+            MESSAGE(STATUS "Enabling stack protector")
+            SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fstack-protector")
+        ENDIF(WITH_SSP)
+    ENDIF(WITH_SSP_ALL)
+ELSE(NOT DISABLE_SSP)
+    MESSAGE(STATUS "Disabling SSP")
+ENDIF(NOT DISABLE_SSP)
 
 
 #IF(NOT DISABLE_PIE)
@@ -224,39 +238,37 @@ MESSAGE(STATUS "---------------------------------------------------" )
 #    IF(WITH_FPIE)
 #        MESSAGE(STATUS "Enabling -fPIE")
 #        SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIE")
-#        #SET(_LINKER_OPTIONS "-fpie")
+#        SET(_LINKER_OPTIONS "-pie")
 #    ENDIF(WITH_FPIE)
 #ELSE(NOT DISABLE_PIE)
 #    MESSAGE(STATUS "Disabling PIE")
 #ENDIF(NOT DISABLE_PIE)
 
 
-#IF(NOT DISABLE_ASM)
-#    IF(HAVE_AMD64_ASM)
-#        SET(HAVE_AMD64_ASM_V 1)
-#        ADD_DEFINITIONS("-DHAVE_AMD64_ASM=1 -DHAVE_AMD64_ASM_V=1")
-#    ENDIF(HAVE_AMD64_ASM)
-#    MESSAGE(STATUS "Enabling ASM")
-#ELSE(NOT DISABLE_ASM)
-#    SET(HAVE_AMD64_ASM_V 0)
-#    SET(HAVE_AMD64_ASM)
-#    MESSAGE(STATUS "Disabling ASM")
-#ENDIF(NOT DISABLE_ASM)
+IF(NOT DISABLE_ASM AND AVAIL_AMD64_ASM)
+    SET(HAVE_AMD64_ASM_V 1)
+    ADD_DEFINITIONS("-DHAVE_AMD64_ASM=1 -DHAVE_AMD64_ASM_V=1")
+    MESSAGE(STATUS "Enabling ASM")
+ELSE(NOT DISABLE_ASM AND AVAIL_AMD64_ASM)
+    SET(HAVE_AMD64_ASM_V 0)
+    MESSAGE(STATUS "Disabling ASM")
+ENDIF(NOT DISABLE_ASM AND AVAIL_AMD64_ASM)
 
 
-#IF(ENABLE_BLOCKING_RANDOM)
-#    ADD_DEFINITIONS("-DUSE_BLOCKING_RANDOM=1")
-#    MESSAGE(STATUS "Enabling random blocking")
-#ENDIF(ENABLE_BLOCKING_RANDOM)
+IF(ENABLE_BLOCKING_RANDOM)
+    ADD_DEFINITIONS("-DUSE_BLOCKING_RANDOM=1")
+    MESSAGE(STATUS "Enabling random blocking")
+ENDIF(ENABLE_BLOCKING_RANDOM)
 
 
-#IF(NOT HAVE_TI_MODE)
-#    SET(HAVE_TI_MODE_V 0)
-#ELSE(NOT HAVE_TI_MODE)
-#    SET(HAVE_TI_MODE_V 1)
-#    ADD_DEFINITIONS("-DHAVE_TI_MODE=1")
-#ENDIF(NOT HAVE_TI_MODE)
-
+IF(NOT AVAIL_TI_MODE)
+    MESSAGE(STATUS "Disabling 128-bit arithmetic")
+    SET(HAVE_TI_MODE_V 0)
+ELSE(NOT AVAIL_TI_MODE)
+    MESSAGE(STATUS "Enabling 128-bit arithmetic")
+    SET(HAVE_TI_MODE_V 1)
+    ADD_DEFINITIONS("-DHAVE_TI_MODE=1")
+ENDIF(NOT AVAIL_TI_MODE)
 
 
 
